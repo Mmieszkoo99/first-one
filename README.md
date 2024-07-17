@@ -26,3 +26,28 @@ Silero Models: These models are designed for enterprise-grade applications and s
 AssemblyAI: Known for its fast transcription speeds and comprehensive feature set, AssemblyAI offers decent accuracy and supports functionalities like diarization and language detection. It is a middle-of-the-road option in terms of price and performance, particularly for video and media transcription​ (Deepgram)​.
 
 These models represent the cutting edge in speech-to-text technology, each with its strengths tailored to different use cases and environments.
+
+
+def summarize_text(text, max_iterations=5):
+    def split_text(text, max_chunk_size=1000):
+        return [text[i:i + max_chunk_size] for i in range(0, len(text), max_chunk_size)]
+
+    def summarize_chunk(chunk):
+        # This function should call your summarization API or method
+        # For demonstration purposes, we'll use a placeholder that returns the chunk itself
+        return chunk
+
+    chunks = split_text(text)
+    preliminary_summaries = [summarize_chunk(chunk) for chunk in chunks]
+    combined_summaries = " ".join(preliminary_summaries)
+    
+    iteration = 0
+    while iteration < max_iterations:
+        final_summary = summarize_chunk(combined_summaries)
+        if len(final_summary) < len(combined_summaries):
+            break
+        combined_summaries = final_summary
+        iteration += 1
+    
+    return final_summary
+
