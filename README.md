@@ -28,26 +28,74 @@ AssemblyAI: Known for its fast transcription speeds and comprehensive feature se
 These models represent the cutting edge in speech-to-text technology, each with its strengths tailored to different use cases and environments.
 
 
-def summarize_text(text, max_iterations=5):
-    def split_text(text, max_chunk_size=1000):
-        return [text[i:i + max_chunk_size] for i in range(0, len(text), max_chunk_size)]
+import os
+import openai
 
-    def summarize_chunk(chunk):
-        # This function should call your summarization API or method
-        # For demonstration purposes, we'll use a placeholder that returns the chunk itself
-        return chunk
+# Set environment variables and constants
+HOME = os.environ.get("HOME")
+CAFILE = HOME + "/cacert.pem"
+API = "https://patagonia-aigen-srv:8080/llm-large/v1"
+CHUNK_SIZE = 1024  # Define the chunk size based on the model's maximum token limit
 
-    chunks = split_text(text)
-    preliminary_summaries = [summarize_chunk(chunk) for chunk in chunks]
-    combined_summaries = " ".join(preliminary_summaries)
-    
-    iteration = 0
-    while iteration < max_iterations:
-        final_summary = summarize_chunk(combined_summaries)
-        if len(final_summary) < len(combined_summaries):
-            break
-        combined_summaries = final_summary
-        iteration += 1
-    
+def api_config(api):
+    # Modify OpenAI's API key and API base to use vLLM's API server.
+    openai.api_key = "EMPTY"
+    openai.api_base = api
+    os.environ["SSL_CERT_FILE"] = CAFILE
+
+    print("[INFO] API:", openai.api_base)
+
+    # Checking available models
+    models = openai.Model.list()
+    model = models['data'][0]['id']
+    print(models)
+    print("[INFO] Model:", model, "\n")
+    return model
+
+# Configure API and get the model
+model = api_config(API)
+
+# Function to generate a response from the model
+def generate_response(history):
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=history,
+        temperature=0
+    )
+    return response.choices[0].message['content']
+
+# Function to read and split the text into chunks
+def read_and_split_text(file_path, chunk_size):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        text = file.read()
+    return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+
+# Function to summarize the text chunks
+def summarize_text_chunks(chunks):
+    summaries = []
+    for chunk in chunks:
+        history = [{"role": "user", "content": f"Proszę podsumuj następujący tekst:\n{chunk}"}]
+        summary = generate_response(history)
+        summaries.append(summary)
+    return summaries
+
+# Function to combine and refine summaries
+def refine_summary(summaries):
+    combined_summary = " ".join(summaries)
+    history = [{"role": "user", "content": f"Proszę podsumuj następujące podsumowania:\n{combined_summary}"}]
+    refined_summary = generate_response(history)
+    return refined_summary
+
+# Main function to handle the summarization process
+def summarize_long_text(file_path):
+    chunks = read_and_split_text(file_path, CHUNK_SIZE)
+    summaries = summarize_text_chunks(chunks)
+    final_summary = refine_summary(summaries)
     return final_summary
+
+# Example usage
+file_path = "path_to_your_file.txt"
+final_summary = summarize_long_text(file_path)
+print("Final Summary:")
+print(final_summary)
 
